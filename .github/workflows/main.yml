@@ -1,0 +1,60 @@
+name: Run Scraper Batch (scrape2.py)
+
+# Trigger: Manual klik tombol 'Run workflow'
+on:
+  workflow_dispatch:
+
+jobs:
+  run-batch-scraper:
+    runs-on: ubuntu-latest
+    
+    # PENTING: Memberi izin bot untuk edit/upload file ke repo
+    permissions:
+      contents: write
+
+    steps:
+      # 1. Download kodingan dari repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Siapkan Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # 3. Install Library
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas selenium webdriver-manager
+
+      # 4. Jalankan Script Scrape
+      # Pastikan di dalam scrape2.py sudah Anda atur BATCH_START & BATCH_END nya
+      - name: Run Scraper Script
+        run: python scrape2.py
+
+      # 5. Simpan Hasil CSV kembali ke GitHub
+      - name: Commit and Push Changes
+        # 'if: always()' agar tetap menyimpan data meskipun script error/timeout di tengah jalan
+        if: always() 
+        run: |
+          # Konfigurasi identitas Bot
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "actions@github.com"
+          
+          # Cek file target
+          git add hoax_data_complete.csv
+          
+          # Logika: Jika ada perubahan file, Commit & Push. Jika tidak, skip.
+          if git diff-index --quiet HEAD; then
+            echo "------------------------------------------------"
+            echo "TIDAK ADA PERUBAHAN DATA."
+            echo "------------------------------------------------"
+          else
+            echo "------------------------------------------------"
+            echo "ADA DATA BARU! MENYIMPAN KE REPO..."
+            echo "------------------------------------------------"
+            git commit -m "Auto-save: Update data hoax_data_complete.csv [skip ci]"
+            git push
+          fi
